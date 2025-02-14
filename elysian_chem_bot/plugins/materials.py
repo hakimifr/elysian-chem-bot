@@ -129,6 +129,9 @@ async def material_cb(client: Client, cb_query: CallbackQuery) -> None:
 
 @Client.on_message(command("unzip"))
 async def unzip(client: Client, message: Message) -> None:
+    async def download_progress_callback(current: int, total: int, m: Message) -> None:
+        await m.edit_text(f"Download progress: **{current}/{total}**")
+
     if not message.reply_to_message or not message.reply_to_message.document:
         await message.reply_text("Please reply to a file!")
         return
@@ -141,7 +144,7 @@ async def unzip(client: Client, message: Message) -> None:
 
         log.info("downloading document with file_id '%s'", file_id)
         await msg.edit_text(f"**downloading document with file_id** `'{file_id}'`")
-        await client.download_media(file_id, tf.name)
+        await client.download_media(file_id, tf.name, progress=download_progress_callback, progress_args=(msg,))
 
         if not is_zipfile(tf.name):
             await msg.edit_text("That file is not a zip file!")
