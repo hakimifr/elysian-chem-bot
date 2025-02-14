@@ -64,7 +64,12 @@ async def generate_inline_keyboard_markup(sections: Sections, columns: int = 3) 
     # note: callback data will be "sections delimited with /:filename"
     rows: list[list[InlineKeyboardButton]] = []
     joined_sections = "/".join(sections)
-    for batch in batched(cur_sec, columns):
+
+    cur_sec_keys = list(cur_sec.keys())
+    if len(sections) > 0:
+        cur_sec_keys.append("🔙 back")
+
+    for batch in batched(cur_sec_keys, columns):
         keyboardified_batch: list[InlineKeyboardButton] = [
             InlineKeyboardButton(x, callback_data=f"{joined_sections}:{x}") for x in batch
         ]
@@ -73,7 +78,7 @@ async def generate_inline_keyboard_markup(sections: Sections, columns: int = 3) 
     return InlineKeyboardMarkup(rows)
 
 
-@Client.on_message(command("bahanbeta"))
+@Client.on_message(command(["bahanbeta", "bahan"]))
 async def material_beta(client: Client, message: Message) -> None:
     inline_keyboard: InlineKeyboardMarkup = await generate_inline_keyboard_markup([])
     await message.reply_text("Please use the button below\n**Current section is:** __/__", reply_markup=inline_keyboard)
@@ -85,6 +90,17 @@ async def material_cb(client: Client, cb_query: CallbackQuery) -> None:
 
     log.info("sections=%s", material_callback.sections)
     log.info("fileid=%s", material_callback.file_name_or_section)
+
+    # handle back button and return early
+    if material_callback.file_name_or_section == "🔙 back":
+        material_callback.sections.pop()
+        markup = await generate_inline_keyboard_markup(material_callback.sections)
+        await cb_query.message.edit(
+            f"Please use the button below\n**Current section is:** __{'/'.join(material_callback.sections)}__",
+            reply_markup=markup,
+        )
+        await cb_query.answer()
+        return
 
     sections_plus_file_name: list[str] = material_callback.sections.copy()
     sections_plus_file_name.append(material_callback.file_name_or_section)
@@ -100,6 +116,7 @@ async def material_cb(client: Client, cb_query: CallbackQuery) -> None:
             suffix = "**reply to this file with** /unzip **to unpack this archive**"
 
         await client.send_document(chat_id, file.file_id, caption=f"[{user_name}](tg://user?id={user_id}) {suffix}")
+        await cb_query.answer()
         return
 
     inline_keyboard: InlineKeyboardMarkup = await generate_inline_keyboard_markup(sections_plus_file_name)
@@ -107,6 +124,7 @@ async def material_cb(client: Client, cb_query: CallbackQuery) -> None:
         f"Please use the button below\n**Current section is:** __{'/'.join(sections_plus_file_name)}__",
         reply_markup=inline_keyboard,
     )
+    await cb_query.answer()
 
 
 @Client.on_message(command("unzip"))
