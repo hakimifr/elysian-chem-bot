@@ -113,7 +113,7 @@ async def material_cb(client: Client, cb_query: CallbackQuery) -> None:
         user_id: int = cb_query.from_user.id
         suffix: str = ""
         if material_callback.file_name_or_section.endswith(".zip"):
-            suffix = "**reply to this file with** /unzip **to unpack this archive**"
+            suffix = ""
 
         await client.send_document(chat_id, file.file_id, caption=f"[{user_name}](tg://user?id={user_id}) {suffix}")
         await cb_query.answer()
